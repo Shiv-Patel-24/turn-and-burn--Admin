@@ -1,6 +1,16 @@
 import React, { useState } from "react";
-import { ArrowLeft, ChevronDown, Plus, Check } from "lucide-react";
+import {
+  ArrowLeft,
+  ChevronDown,
+  Plus,
+  Check,
+  Loader2,
+  AlertCircle,
+  Upload,
+  X,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { adminService } from "../api/admin";
 
 const CAR_FEATURES_LIST = [
   [
@@ -36,80 +46,121 @@ export default function ListCarWizard() {
   const navigate = useNavigate();
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
+  // Submitting states
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
+
+  // Real Image Uploads
+  const [selectedPhotoFiles, setSelectedPhotoFiles] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
+
+  // Form State strictly adhering to the Figma design
   const [formData, setFormData] = useState({
+    // Step 1: Location
     locationAddress: "",
 
+    // Step 2: VIN
     vin: "",
     olderThan1981: false,
 
+    // Step 3: Make and model
     year: "",
     make: "",
     model: "",
     trimStyle: "",
 
+    // Step 4: Profile photo
     profilePhoto: null,
 
+    // Step 5: Mobile number & OTP
     countryCode: "+1",
     mobileNumber: "555 1722-123",
+    otp: "",
+    otpVerified: false,
     tripUpdatesOptIn: false,
 
+    // Step 6: Driver's license
     licenseCountry: "United Status",
     licenseState: "Texas",
     licenseNumber: "",
     firstName: "",
     middleName: "",
     lastName: "",
-    expMonth: "",
-    expDay: "",
-    expYear: "",
-    dobMonth: "",
-    dobDay: "",
-    dobYear: "",
+    expMonth: "Month",
+    expDay: "Day",
+    expYear: "Year",
+    dobMonth: "Month",
+    dobDay: "Day",
+    dobYear: "Year",
 
+    // Step 7: Your goals
     primaryFinancialGoal: "Select...",
     howOftenFamilyUses: "Select...",
     howOftenToShare: "Select...",
 
+    // Step 8: Car availability
     advanceNotice: "Select...",
     minTripDuration: "1 day (recommended)",
     maxTripDuration: "2 weeks (recommended)",
 
+    // Step 9: Car details
     plateNumber: "",
     plateState: "State / Province",
-    selectedFeatures: ["All-wheel drive", "Bluetooth", "Apple CarPlay"],
+    selectedFeatures: [
+      "All-wheel drive",
+      "Bluetooth",
+      "Apple CarPlay",
+      "Backup camera",
+    ],
     carDescription: "",
 
-    uploadedCarPhotos: [
-      "https://images.unsplash.com/photo-1617788138017-80ad40651399?w=600&h=400&fit=crop&auto=format",
-    ],
+    // Step 10: Car photos
+    uploadedPhotos: [],
 
-    standardDailyPrice: "$95",
-    minPrice: "$75",
-    weeklyDiscount: "10%",
+    // Step 11: Pricing & discounts / Payout
+    automaticPricing: true,
+    maxPrice: "100",
+    minPrice: "30",
+    standardDailyPrice: "65",
+
+    // Step 12 (10 of 11): Terms and conditions
+    termsAgreed: [true, true, true, true],
+
+    // Step 13 (11 of 11): Acknowledgment
+    acknowledgmentAccepted: false,
   });
 
+  // Steps configuration exactly matching user uploaded Figma sequence:
+  // 1: Location -> Next: VIN
+  // 2: VIN -> Next: Profile photo (Wait, Make & Model in between!)
+  // In the design screenshots:
+  // Step 1: Location (1 of 11 | Next: VIN)
+  // Step 2: VIN (1 of 11 | Next: Profile photo)
+  // Step 3: Make and model (1 of 11 | Next: Profile photo)
+  // Step 4: Profile photo (2 of 11 | Next: Mobile number)
+  // Step 5: Mobile number (3 of 11 | Next: Driver's license)
+  // Step 6: Driver's license (4 of 11 | Next: Your goals)
+  // Step 7: Your goals (5 of 11 | Next: Car availability)
+  // Step 8: Car availability (6 of 11 | Next: Car details)
+  // Step 9: Car details (7 of 11 | Next: Car photos)
+  // Step 10: Car photos (8 of 11 | Next: Pricing and payout)
+  // Step 11: Pricing & discounts (9 of 11 | Next: Terms and conditions)
+  // Step 12: Terms and conditions (10 of 11 | Next: Acknowledgment)
+  // Step 13: Acknowledgment (11 of 11 | SAVE)
   const STEPS_CONFIG = [
-    { num: 1, name: "Location", next: "VIN", progress: "12%" },
-    { num: 2, name: "VIN", next: "Profile photo", progress: "22%" },
-    { num: 3, name: "Make and model", next: "Profile photo", progress: "30%" },
-    { num: 4, name: "Profile photo", next: "Mobile number", progress: "38%" },
-    {
-      num: 5,
-      name: "Mobile number",
-      next: "Driver's license",
-      progress: "46%",
-    },
-    { num: 6, name: "Driver's license", next: "Your goals", progress: "54%" },
-    { num: 7, name: "Your goals", next: "Car availability", progress: "62%" },
-    { num: 8, name: "Car availability", next: "Car details", progress: "72%" },
-    { num: 9, name: "Car details", next: "Car photos", progress: "80%" },
-    {
-      num: 10,
-      name: "Car photos",
-      next: "Pricing and payout",
-      progress: "90%",
-    },
-    { num: 11, name: "Pricing and payout", next: "Finish", progress: "100%" },
+    { num: "1 of 11", name: "Location", next: "VIN", progress: "9%" },
+    { num: "1 of 11", name: "VIN", next: "Make and model", progress: "18%" },
+    { num: "1 of 11", name: "Make and model", next: "Profile photo", progress: "27%" },
+    { num: "2 of 11", name: "Profile photo", next: "Mobile number", progress: "36%" },
+    { num: "3 of 11", name: "Mobile number", next: "Driver's license", progress: "45%" },
+    { num: "4 of 11", name: "Driver's license", next: "Your goals", progress: "54%" },
+    { num: "5 of 11", name: "Your goals", next: "Car availability", progress: "63%" },
+    { num: "6 of 11", name: "Car availability", next: "Car details", progress: "72%" },
+    { num: "7 of 11", name: "Car details", next: "Car photos", progress: "81%" },
+    { num: "8 of 11", name: "Car photos", next: "Pricing and payout", progress: "90%" },
+    { num: "9 of 11", name: "Pricing and payout", next: "Terms and conditions", progress: "94%" },
+    { num: "10 of 11", name: "Terms and conditions", next: "Acknowledgment", progress: "97%" },
+    { num: "11 of 11", name: "Acknowledgment", next: "Finish", progress: "100%" },
   ];
 
   const currentMeta = STEPS_CONFIG[currentStepIndex];
@@ -124,6 +175,23 @@ export default function ListCarWizard() {
     });
   };
 
+  const handlePhotoSelect = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+
+    setSelectedPhotoFiles((prev) => [...prev, ...files]);
+    const newPreviews = files.map((f) => ({
+      name: f.name,
+      url: URL.createObjectURL(f),
+    }));
+    setPhotoPreviews((prev) => [...prev, ...newPreviews]);
+  };
+
+  const handleRemovePhoto = (index) => {
+    setSelectedPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    setPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
   const handleBack = () => {
     if (currentStepIndex > 0) {
       setCurrentStepIndex(currentStepIndex - 1);
@@ -132,16 +200,83 @@ export default function ListCarWizard() {
     }
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (currentStepIndex < STEPS_CONFIG.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
     } else {
-      navigate("/fleet");
+      // Final Step (Acknowledgment): Submit to backend dynamically
+      setSubmitting(true);
+      setSubmitError("");
+      try {
+        const cleanDailyRate =
+          Number(String(formData.standardDailyPrice).replace(/[^0-9.]/g, "")) ||
+          Number(formData.minPrice) ||
+          75;
+        const cleanHourlyRate = Math.max(5, Math.round(cleanDailyRate / 18));
+        const cleanYear = Number(formData.year) || 2024;
+
+        const plate =
+          formData.plateNumber.trim() ||
+          `NYC-${Math.floor(1000 + Math.random() * 8999)}`;
+
+        const payload = {
+          make: formData.make.trim() || "Toyota",
+          model: formData.model.trim() || "Camry",
+          year: cleanYear,
+          registration: plate,
+          fuelType: "Gasoline",
+          dailyRate: cleanDailyRate,
+          hourlyRate: cleanHourlyRate,
+          style: formData.trimStyle || "Sedan",
+          category: "regular",
+          color: "Black",
+          transmission: "Automatic",
+          seats: 5,
+          odometer: 1000,
+          vin:
+            formData.vin.trim().length === 17
+              ? formData.vin.trim().toUpperCase()
+              : undefined,
+          city: "New York",
+          address: formData.locationAddress || "Manhattan, NY",
+          description:
+            formData.carDescription ||
+            `${cleanYear} ${formData.make || "Toyota"} ${formData.model || "Camry"} available for booking.`,
+          status: "available",
+          listingStatus: "listed",
+          approvalStatus: "approved",
+        };
+
+        const res = await adminService.createFleetVehicle(payload);
+        const createdVehicle = res?.data;
+
+        // If photos were selected, upload them to Cloudinary for this vehicle
+        if (createdVehicle?._id && selectedPhotoFiles.length > 0) {
+          try {
+            const angles = selectedPhotoFiles.map((_, i) =>
+              i === 0 ? "front" : "other"
+            );
+            await adminService.uploadVehiclePhotos(
+              createdVehicle._id,
+              selectedPhotoFiles,
+              angles
+            );
+          } catch (uploadErr) {
+            console.warn("Photos upload warning:", uploadErr);
+          }
+        }
+
+        navigate("/fleet");
+      } catch (err) {
+        setSubmitError(err.message || "Failed to create vehicle in backend.");
+        setSubmitting(false);
+      }
     }
   };
 
   return (
     <div className="w-full bg-white text-left font-sans select-none min-h-full pb-16">
+      {/* Wizard Header matching Figma */}
       <div className="w-full max-w-5xl pb-8">
         <div className="flex items-center gap-2 mb-2">
           <button
@@ -157,7 +292,7 @@ export default function ListCarWizard() {
         </div>
 
         <div className="flex items-center text-xs text-gray-500 mb-3 font-normal">
-          <span>{currentMeta.num} of 11 steps</span>
+          <span>{currentMeta.num} steps</span>
           <span className="mx-2 text-gray-300 font-bold">|</span>
           <span>Next: {currentMeta.next}</span>
           <span className="mx-2 text-gray-300 font-bold">|</span>
@@ -179,6 +314,7 @@ export default function ListCarWizard() {
       </div>
 
       <div className="w-full max-w-4xl">
+        {/* STEP 1: Location */}
         {currentStepIndex === 0 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -207,13 +343,18 @@ export default function ListCarWizard() {
             <button
               type="button"
               onClick={handleNext}
-              className="bg-[#BFDBFE] text-white px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-wider"
+              className={`px-8 py-3 rounded-xl text-xs font-bold uppercase tracking-wider text-white ${
+                formData.locationAddress.trim()
+                  ? "bg-[#0066FF] hover:bg-[#0052cc]"
+                  : "bg-[#BFDBFE]"
+              }`}
             >
               NEXT
             </button>
           </div>
         )}
 
+        {/* STEP 2: VIN */}
         {currentStepIndex === 1 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -266,6 +407,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 3: Make and model */}
         {currentStepIndex === 2 && (
           <div className="space-y-5 max-w-2xl">
             <div>
@@ -346,6 +488,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 4: Profile photo */}
         {currentStepIndex === 3 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -378,6 +521,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 5: Mobile number & OTP */}
         {currentStepIndex === 4 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -414,22 +558,40 @@ export default function ListCarWizard() {
                 />
               </div>
             </div>
-            <label className="flex items-center gap-3 cursor-pointer">
+
+            <div>
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#0066FF] hover:underline"
+              >
+                Change phone number.
+              </button>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-900 mb-2">
+                Enter your OTP
+              </label>
               <input
-                type="checkbox"
-                checked={formData.tripUpdatesOptIn}
+                type="text"
+                placeholder="Enter"
+                value={formData.otp}
                 onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    tripUpdatesOptIn: e.target.checked,
-                  })
+                  setFormData({ ...formData, otp: e.target.value })
                 }
-                className="w-5 h-5 text-blue-600 rounded border-gray-400"
+                className="w-full border border-gray-400 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
               />
-              <span className="text-xs text-gray-800 font-medium">
-                Get important trip updates via text message.
-              </span>
-            </label>
+            </div>
+
+            <div>
+              <button
+                type="button"
+                className="text-xs font-semibold text-[#0066FF] hover:underline"
+              >
+                Re-send OTP
+              </button>
+            </div>
+
             <button
               type="button"
               onClick={handleNext}
@@ -440,6 +602,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 6: Driver's license */}
         {currentStepIndex === 5 && (
           <div className="space-y-6 max-w-3xl">
             <div>
@@ -575,7 +738,13 @@ export default function ListCarWizard() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.expMonth}
+                    onChange={(e) =>
+                      setFormData({ ...formData, expMonth: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Month</option>
                     {[
                       "01",
@@ -600,7 +769,13 @@ export default function ListCarWizard() {
                   />
                 </div>
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.expDay}
+                    onChange={(e) =>
+                      setFormData({ ...formData, expDay: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Day</option>
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d}>{d}</option>
@@ -612,7 +787,13 @@ export default function ListCarWizard() {
                   />
                 </div>
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.expYear}
+                    onChange={(e) =>
+                      setFormData({ ...formData, expYear: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Year</option>
                     {["2026", "2027", "2028", "2029", "2030"].map((y) => (
                       <option key={y}>{y}</option>
@@ -632,7 +813,13 @@ export default function ListCarWizard() {
               </label>
               <div className="grid grid-cols-3 gap-4">
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.dobMonth}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dobMonth: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Month</option>
                     {[
                       "01",
@@ -657,7 +844,13 @@ export default function ListCarWizard() {
                   />
                 </div>
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.dobDay}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dobDay: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Day</option>
                     {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => (
                       <option key={d}>{d}</option>
@@ -669,9 +862,15 @@ export default function ListCarWizard() {
                   />
                 </div>
                 <div className="relative">
-                  <select className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10">
+                  <select
+                    value={formData.dobYear}
+                    onChange={(e) =>
+                      setFormData({ ...formData, dobYear: e.target.value })
+                    }
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs font-medium text-gray-500 bg-white focus:outline-none pr-10"
+                  >
                     <option>Year</option>
-                    {["1990", "1995", "2000", "2002", "2004"].map((y) => (
+                    {["1985", "1990", "1995", "2000", "2002", "2004"].map((y) => (
                       <option key={y}>{y}</option>
                     ))}
                   </select>
@@ -695,6 +894,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 7: Your goals */}
         {currentStepIndex === 6 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -722,7 +922,7 @@ export default function ListCarWizard() {
                         primaryFinancialGoal: e.target.value,
                       })
                     }
-                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-500 bg-white focus:outline-none pr-10"
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-700 bg-white focus:outline-none pr-10"
                   >
                     <option>Select...</option>
                     <option>Build a full-time rental business</option>
@@ -749,7 +949,7 @@ export default function ListCarWizard() {
                         howOftenFamilyUses: e.target.value,
                       })
                     }
-                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-500 bg-white focus:outline-none pr-10"
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-700 bg-white focus:outline-none pr-10"
                   >
                     <option>Select...</option>
                     <option>Daily</option>
@@ -776,7 +976,7 @@ export default function ListCarWizard() {
                         howOftenToShare: e.target.value,
                       })
                     }
-                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-500 bg-white focus:outline-none pr-10"
+                    className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-700 bg-white focus:outline-none pr-10"
                   >
                     <option>Select...</option>
                     <option>As much as possible</option>
@@ -808,6 +1008,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 8: Car availability */}
         {currentStepIndex === 7 && (
           <div className="space-y-6 max-w-2xl">
             <div>
@@ -833,7 +1034,7 @@ export default function ListCarWizard() {
                   onChange={(e) =>
                     setFormData({ ...formData, advanceNotice: e.target.value })
                   }
-                  className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-500 bg-white focus:outline-none pr-10"
+                  className="w-full appearance-none border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-700 bg-white focus:outline-none pr-10"
                 >
                   <option>Select...</option>
                   <option>1 hour notice</option>
@@ -923,6 +1124,7 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 9: Car details */}
         {currentStepIndex === 8 && (
           <div className="space-y-6 max-w-3xl">
             <div>
@@ -951,7 +1153,7 @@ export default function ListCarWizard() {
                     onChange={(e) =>
                       setFormData({ ...formData, plateNumber: e.target.value })
                     }
-                    className="w-full border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500"
+                    className="w-full border border-gray-400 rounded-xl px-4 py-3 text-xs text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-500 font-mono uppercase"
                   />
                 </div>
 
@@ -1019,7 +1221,7 @@ export default function ListCarWizard() {
               </h3>
               <textarea
                 rows={3}
-                placeholder="Tell guests what makes your car unique and any special rules..."
+                placeholder="Please describe your car details..."
                 value={formData.carDescription}
                 onChange={(e) =>
                   setFormData({ ...formData, carDescription: e.target.value })
@@ -1040,13 +1242,14 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 10: Car photos matching Figma Image */}
         {currentStepIndex === 9 && (
           <div className="space-y-6 max-w-4xl">
             <div>
               <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
                 Car photos
               </h2>
-              <p className="text-xs text-gray-400 mt-1 font-normal max-w-3xl leading-relaxed">
+              <p className="text-xs text-gray-500 mt-1 font-normal max-w-3xl leading-relaxed">
                 Lorem Ipsum is simply dummy text of the printing and typesetting
                 industry. Lorem Ipsum has been the industry's standard dummy
                 text ever since 1966, when designers at Letraset and James
@@ -1060,42 +1263,15 @@ export default function ListCarWizard() {
               <h3 className="text-sm font-bold text-gray-900 mb-3">
                 Car photo tips
               </h3>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                {[
-                  {
-                    angle: "Front",
-                    img: "https://images.unsplash.com/photo-1541899481282-d53bffe3c35d?w=300&h=200&fit=crop&auto=format",
-                  },
-                  {
-                    angle: "3/4 Front-side",
-                    img: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=300&h=200&fit=crop&auto=format",
-                  },
-                  {
-                    angle: "Left Side",
-                    img: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=300&h=200&fit=crop&auto=format",
-                  },
-                  {
-                    angle: "Right Side",
-                    img: "https://images.unsplash.com/photo-1555215695-3004980ad54e?w=300&h=200&fit=crop&auto=format",
-                  },
-                  {
-                    angle: "Back",
-                    img: "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=300&h=200&fit=crop&auto=format",
-                  },
-                ].map((tip, idx) => (
-                  <div key={idx} className="flex flex-col items-center">
-                    <div className="w-full h-24 border border-gray-300 rounded-xl overflow-hidden bg-[#FAFBFD] p-2 flex items-center justify-center">
-                      <img
-                        src={tip.img}
-                        alt={tip.angle}
-                        className="w-full h-full object-contain rounded"
-                      />
-                    </div>
-                    <span className="text-xs font-semibold text-gray-800 mt-2">
-                      {tip.angle}
-                    </span>
-                  </div>
-                ))}
+              <div className="w-full border border-gray-200 rounded-2xl overflow-hidden p-2 bg-[#FAFBFD]">
+                <img
+                  src="/images/helpful-tips.png"
+                  alt="Car photo tips"
+                  className="w-full h-auto object-contain"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                  }}
+                />
               </div>
             </div>
 
@@ -1104,25 +1280,55 @@ export default function ListCarWizard() {
                 Upload your car photos
               </h3>
               <div className="flex flex-wrap items-center gap-4">
-                {formData.uploadedCarPhotos.map((url, i) => (
+                {/* Default Nissan GTR photo preview from design */}
+                <div className="w-40 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative group bg-gray-100">
+                  <img
+                    src="/images/gtr-blue.jpg"
+                    alt="Car"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.src =
+                        "https://images.unsplash.com/photo-1549399542-7e3f8b79c341?w=400&h=300&fit=crop&auto=format";
+                    }}
+                  />
+                </div>
+
+                {/* Newly selected real photo previews */}
+                {photoPreviews.map((photo, i) => (
                   <div
                     key={i}
-                    className="w-40 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative group"
+                    className="w-40 h-28 rounded-xl overflow-hidden border border-gray-200 shadow-sm relative group bg-gray-100"
                   >
                     <img
-                      src={url}
-                      alt="Car"
+                      src={photo.url}
+                      alt="Uploaded"
                       className="w-full h-full object-cover"
                     />
+                    <button
+                      type="button"
+                      onClick={() => handleRemovePhoto(i)}
+                      className="absolute top-1.5 right-1.5 bg-rose-600 text-white p-1 rounded-full shadow-md"
+                      title="Remove"
+                    >
+                      <X size={12} />
+                    </button>
                   </div>
                 ))}
 
-                <div className="w-40 h-28 rounded-xl border border-[#93C5FD] bg-[#EFF6FF] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100/60 transition-colors">
+                {/* Upload Photo Button */}
+                <label className="w-40 h-28 rounded-xl border border-[#93C5FD] bg-[#EFF6FF] flex flex-col items-center justify-center cursor-pointer hover:bg-blue-100/60 transition-colors">
                   <Plus size={22} className="text-[#0066FF] mb-1" />
                   <span className="text-xs font-bold text-[#0066FF]">
                     Upload photo
                   </span>
-                </div>
+                  <input
+                    type="file"
+                    multiple
+                    accept="image/*"
+                    onChange={handlePhotoSelect}
+                    className="hidden"
+                  />
+                </label>
               </div>
             </div>
 
@@ -1138,75 +1344,298 @@ export default function ListCarWizard() {
           </div>
         )}
 
+        {/* STEP 11: Pricing & discounts / Payout matching Figma */}
         {currentStepIndex === 10 && (
           <div className="space-y-6 max-w-2xl">
             <div>
               <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                Pricing and payout
+                Pricing &amp; discounts
               </h2>
               <p className="text-xs text-gray-400 mt-1 font-normal">
-                Set your vehicle daily baseline rate and duration discounts.
+                Lorem Ipsum is simply dummy text of the printing and typesetting
+                industry.
               </p>
             </div>
 
             <div className="space-y-4">
               <div>
-                <label className="block text-xs font-bold text-gray-900 mb-1.5">
-                  Standard Daily Price
-                </label>
-                <input
-                  type="text"
-                  value={formData.standardDailyPrice}
-                  onChange={(e) =>
+                <h3 className="text-sm font-bold text-gray-900 mb-1">
+                  Automatic Pricing
+                </h3>
+                <p className="text-xs text-gray-600 mb-3 font-normal">
+                  Boost earning by letting your price automatically adjust to match demand.
+                </p>
+                {/* Switch toggle */}
+                <button
+                  type="button"
+                  onClick={() =>
                     setFormData({
                       ...formData,
-                      standardDailyPrice: e.target.value,
+                      automaticPricing: !formData.automaticPricing,
                     })
                   }
-                  className="w-full border border-gray-400 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
-                />
+                  className={`w-14 h-7 rounded-full p-1 transition-colors relative flex items-center ${
+                    formData.automaticPricing ? "bg-[#0066FF]" : "bg-gray-300"
+                  }`}
+                >
+                  <div
+                    className={`w-5 h-5 rounded-full bg-white shadow-md transition-transform ${
+                      formData.automaticPricing ? "translate-x-7" : "translate-x-0"
+                    }`}
+                  />
+                </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-gray-900 mb-1.5">
-                    Minimum Price
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.minPrice}
-                    onChange={(e) =>
-                      setFormData({ ...formData, minPrice: e.target.value })
-                    }
-                    className="w-full border border-gray-400 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-bold text-gray-900 mb-1.5">
-                    Weekly Discount
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.weeklyDiscount}
-                    onChange={(e) =>
-                      setFormData({
-                        ...formData,
-                        weeklyDiscount: e.target.value,
-                      })
-                    }
-                    className="w-full border border-gray-400 rounded-xl px-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
-                  />
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 mb-1">
+                  Price range
+                </h3>
+                <p className="text-xs text-gray-600 mb-3 font-normal leading-relaxed">
+                  Set your minimum and maximum daily price, and Automatic Pricing will adapt your price within that range. Prices are before any applicable discounts.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-1.5">
+                      Maximum price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-3 text-sm text-gray-700">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.maxPrice}
+                        onChange={(e) =>
+                          setFormData({ ...formData, maxPrice: e.target.value })
+                        }
+                        className="w-full border border-gray-400 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <span className="text-[11px] text-gray-400 block mt-1 text-right">
+                      Recommended: $30
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-gray-900 mb-1.5">
+                      Minimum price
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-3 text-sm text-gray-700">
+                        $
+                      </span>
+                      <input
+                        type="number"
+                        value={formData.minPrice}
+                        onChange={(e) =>
+                          setFormData({ ...formData, minPrice: e.target.value })
+                        }
+                        className="w-full border border-gray-400 rounded-xl pl-8 pr-4 py-3 text-sm text-gray-800 focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    <span className="text-[11px] text-gray-400 block mt-1 text-right">
+                      Recommended: $80
+                    </span>
+                  </div>
                 </div>
               </div>
+
+              <div className="pt-2">
+                <h2 className="text-2xl font-extrabold text-gray-900 tracking-tight mb-1">
+                  Payout
+                </h2>
+                <p className="text-xs text-gray-400 font-normal leading-relaxed">
+                  Lorem Ipsum is simply dummy text of the printing and typesetting
+                  industry. Lorem Ipsum has been the industry's standard dummy
+                  text ever since 1966, when designers at Letraset and James
+                  Mosley, the librarian at St Bride Printing Library in London,
+                  took a 1914 Cicero translation and scrambled it to make dummy
+                  text for Letraset's Body Type sheets.
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="bg-[#0066FF] hover:bg-[#0052cc] text-white px-8 py-3 rounded-xl text-xs font-bold uppercase"
+            >
+              NEXT
+            </button>
+          </div>
+        )}
+
+        {/* STEP 12: Terms and conditions */}
+        {currentStepIndex === 11 && (
+          <div className="space-y-6 max-w-3xl">
+            <div>
+              <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                Terms and conditions
+              </h2>
+              <p className="text-xs text-gray-400 mt-1 font-normal leading-relaxed">
+                Lorem Ipsum is simply dummy text of the printing and typesetting
+                industry. Lorem Ipsum has been the industry's standard dummy
+                text ever since 1966, when designers at Letraset and James
+                Mosley, the librarian at St Bride Printing Library in London,
+                took a 1914 Cicero translation and scrambled it to make dummy
+                text for Letraset's Body Type sheets.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              {/* Checkbox box 1 */}
+              <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-5 space-y-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="w-5 h-5 text-black rounded mt-0.5 accent-black"
+                  />
+                  <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                    Lorem Ipsum is simply dummy text of the printing and
+                    typesetting industry. Lorem Ipsum has been the industry's
+                    standard dummy text ever since 1966, when designers at
+                    Letraset and James Mosley, the librarian at St Bride Printing
+                    Library in London, took a 1914 Cicero translation and
+                    scrambled it to make dummy text for Letraset's Body Type
+                    sheets.
+                  </p>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="w-5 h-5 text-black rounded mt-0.5 accent-black"
+                  />
+                  <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                    Lorem Ipsum is simply dummy text of the printing and
+                    typesetting industry. Lorem Ipsum has been the industry's
+                    standard dummy text ever since 1966, when designers at
+                    Letraset and James Mosley, the librarian at St Bride Printing
+                    Library in London, took a 1914 Cicero translation and
+                    scrambled it to make dummy text for Letraset's Body Type
+                    sheets.
+                  </p>
+                </label>
+              </div>
+
+              {/* Checkbox box 2 */}
+              <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-5 space-y-4">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="w-5 h-5 text-black rounded mt-0.5 accent-black"
+                  />
+                  <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                    Lorem Ipsum is simply dummy text of the printing and
+                    typesetting industry. Lorem Ipsum has been the industry's
+                    standard dummy text ever since 1966, when designers at
+                    Letraset and James Mosley, the librarian at St Bride Printing
+                    Library in London, took a 1914 Cicero translation and
+                    scrambled it to make dummy text for Letraset's Body Type
+                    sheets.
+                  </p>
+                </label>
+
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    defaultChecked
+                    className="w-5 h-5 text-black rounded mt-0.5 accent-black"
+                  />
+                  <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                    Lorem Ipsum is simply dummy text of the printing and
+                    typesetting industry. Lorem Ipsum has been the industry's
+                    standard dummy text ever since 1966, when designers at
+                    Letraset and James Mosley, the librarian at St Bride Printing
+                    Library in London, took a 1914 Cicero translation and
+                    scrambled it to make dummy text for Letraset's Body Type
+                    sheets.
+                  </p>
+                </label>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNext}
+              className="bg-[#0066FF] hover:bg-[#0052cc] text-white px-8 py-3 rounded-xl text-xs font-bold uppercase"
+            >
+              NEXT
+            </button>
+          </div>
+        )}
+
+        {/* STEP 13: Acknowledgment (FINAL SAVE) */}
+        {currentStepIndex === 12 && (
+          <div className="space-y-6 max-w-3xl">
+            <div>
+              <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+                Acknowledgment
+              </h2>
+              <p className="text-xs text-gray-400 mt-1 font-normal leading-relaxed">
+                Lorem Ipsum is simply dummy text of the printing and typesetting
+                industry. Lorem Ipsum has been the industry's standard dummy
+                text ever since 1966, when designers at Letraset and James
+                Mosley, the librarian at St Bride Printing Library in London,
+                took a 1914 Cicero translation and scrambled it to make dummy
+                text for Letraset's Body Type sheets.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-5 space-y-3">
+                <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                  Lorem Ipsum is simply dummy text of the printing and
+                  typesetting industry. Lorem Ipsum has been the industry's
+                  standard dummy text ever since 1966, when designers at Letraset
+                  and James Mosley, the librarian at St Bride Printing Library in
+                  London, took a 1914 Cicero translation and scrambled it to make
+                  dummy text for Letraset's Body Type sheets.
+                </p>
+                <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                  Lorem Ipsum is simply dummy text of the printing and
+                  typesetting industry. Lorem Ipsum has been the industry's
+                  standard dummy text ever since 1966.
+                </p>
+              </div>
+
+              <div className="bg-[#F8F9FA] border border-gray-100 rounded-2xl p-5 space-y-3">
+                <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                  Lorem Ipsum is simply dummy text of the printing and
+                  typesetting industry. Lorem Ipsum has been the industry's
+                  standard dummy text ever since 1966, when designers at Letraset
+                  and James Mosley, the librarian at St Bride Printing Library in
+                  London, took a 1914 Cicero translation and scrambled it to make
+                  dummy text for Letraset's Body Type sheets.
+                </p>
+                <p className="text-xs text-gray-800 leading-relaxed font-medium">
+                  Lorem Ipsum is simply dummy text of the printing and
+                  typesetting industry. Lorem Ipsum has been the industry's
+                  standard dummy text ever since 1966.
+                </p>
+              </div>
+            </div>
+
+            {submitError && (
+              <div className="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle size={16} className="shrink-0 text-rose-500" />
+                <span>{submitError}</span>
+              </div>
+            )}
 
             <div>
               <button
                 type="button"
                 onClick={handleNext}
-                className="bg-[#0066FF] hover:bg-[#0052cc] text-white px-8 py-3 rounded-xl text-xs font-bold uppercase shadow-sm"
+                disabled={submitting}
+                className="bg-[#0066FF] hover:bg-[#0052cc] text-white px-10 py-3.5 rounded-xl text-xs font-bold uppercase shadow-sm flex items-center gap-2 disabled:opacity-70 transition-all tracking-wider"
               >
-                SUBMIT &amp; FINISH
+                {submitting && <Loader2 size={14} className="animate-spin" />}
+                <span>{submitting ? "SAVING..." : "SAVE"}</span>
               </button>
             </div>
           </div>

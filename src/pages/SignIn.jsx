@@ -1,16 +1,43 @@
 import React, { useState } from "react";
-import { Link } from "react-router-dom";
-import { Phone, ChevronDown, Eye, EyeOff, Lock, UserCheck } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import {
+  Mail,
+  Eye,
+  EyeOff,
+  Lock,
+  UserCheck,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
+import { adminService } from "../api/admin";
 
 export default function SignIn() {
-  const [countryCode, setCountryCode] = useState("+1");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [password, setPassword] = useState("");
+  const navigate = useNavigate();
+  const [email, setEmail] = useState("admin@turnburn.com");
+  const [password, setPassword] = useState("Password123!");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log("Sign In submit", { countryCode, phoneNumber, password });
+    setError("");
+    setLoading(true);
+
+    try {
+      const res = await adminService.login(email.trim(), password);
+      if (res?.success) {
+        navigate("/");
+      } else {
+        setError(res?.message || "Invalid login credentials.");
+      }
+    } catch (err) {
+      setError(
+        err.message || "Failed to sign in. Please verify your admin credentials."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -18,10 +45,10 @@ export default function SignIn() {
       <div className="w-full md:w-1/2 h-full bg-black flex flex-col justify-between items-center relative px-8 py-10 lg:px-14 lg:py-12 select-none overflow-hidden">
         <div className="w-full flex flex-col items-center text-center z-10 pt-4">
           <h1 className="text-white text-3xl sm:text-4xl font-semibold mt-7 tracking-wide">
-            Welcome Back
+            Turn & Burn Admin
           </h1>
           <p className="text-gray-400 text-xs sm:text-sm mt-2 font-normal max-w-sm">
-            Discover the world on wheels with our car rental service
+            Centralized platform management, live fleet control & analytics
           </p>
 
           <div className="flex items-center justify-center gap-3 w-40 mt-4">
@@ -49,8 +76,11 @@ export default function SignIn() {
         <div className="w-full max-w-md bg-white rounded-3xl border border-gray-100 shadow-[0_10px_40px_-15px_rgba(0,0,0,0.08)] p-8 sm:p-10">
           <div className="text-center mb-7">
             <h2 className="text-3xl font-medium text-gray-900 tracking-tight">
-              Sign In
+              Admin Portal
             </h2>
+            <p className="text-xs text-gray-500 mt-1">
+              Sign in with your administrator account
+            </p>
             <div className="flex items-center justify-center gap-2.5 w-28 mx-auto mt-2.5">
               <div className="h-[1px] bg-gray-300 flex-1"></div>
               <div className="w-1.5 h-1.5 rotate-45 bg-gray-800"></div>
@@ -58,26 +88,28 @@ export default function SignIn() {
             </div>
           </div>
 
+          {error && (
+            <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-xs flex items-center gap-2">
+              <AlertCircle size={15} className="shrink-0 text-red-500" />
+              <span>{error}</span>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">
-                Phone number
+                Admin Email
               </label>
               <div className="flex items-center border border-gray-200 rounded-xl px-3.5 py-3 hover:border-gray-300 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-100 transition-all bg-white">
-                <div className="flex items-center gap-1.5 pr-2.5 border-r border-gray-200 text-gray-700 text-xs sm:text-sm font-medium select-none">
-                  <span className="text-sm">🇺🇸</span>
-                  <span className="text-gray-400 text-[10px]">▼</span>
-                  <span className="text-xs text-gray-800">{countryCode}</span>
-                </div>
                 <input
-                  type="tel"
+                  type="email"
                   required
-                  placeholder="Enter your phone number"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  className="flex-1 px-3 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
+                  placeholder="admin@turnburn.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="flex-1 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
                 />
-                <Phone className="w-4 h-4 text-gray-400" />
+                <Mail className="w-4 h-4 text-gray-400" />
               </div>
             </div>
 
@@ -89,7 +121,7 @@ export default function SignIn() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
-                  placeholder="Enter your password"
+                  placeholder="Enter admin password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="flex-1 text-xs sm:text-sm text-gray-800 placeholder-gray-400 focus:outline-none bg-transparent"
@@ -102,7 +134,7 @@ export default function SignIn() {
                   {showPassword ? (
                     <EyeOff className="w-4 h-4" />
                   ) : (
-                    <ChevronDown className="w-4 h-4" />
+                    <Eye className="w-4 h-4" />
                   )}
                 </button>
               </div>
@@ -110,53 +142,16 @@ export default function SignIn() {
 
             <button
               type="submit"
-              className="w-full bg-[#0066FF] hover:bg-[#0052cc] text-white font-semibold py-3.5 rounded-xl transition-all duration-200 text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.99] mt-3"
+              disabled={loading}
+              className="w-full bg-[#0066FF] hover:bg-[#0052cc] text-white font-semibold py-3.5 rounded-xl transition-all duration-200 text-xs sm:text-sm tracking-wider uppercase shadow-md hover:shadow-lg active:scale-[0.99] mt-3 flex items-center justify-center gap-2 disabled:opacity-70"
             >
-              SIGN IN
+              {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              <span>{loading ? "AUTHENTICATING..." : "SIGN IN"}</span>
             </button>
-
-            <div className="relative flex items-center justify-center my-4">
-              <div className="border-t border-gray-200 w-full"></div>
-              <span className="bg-white px-3 text-[10px] tracking-wider text-gray-400 uppercase absolute font-medium">
-                OR
-              </span>
-            </div>
-
-            <div className="text-center text-xs text-gray-600">
-              Forgot Password?{" "}
-              <a
-                href="#forgot"
-                className="font-bold text-gray-900 underline underline-offset-2 hover:text-blue-600 tracking-wide text-xs uppercase"
-              >
-                CLICK HERE
-              </a>
-            </div>
-
-            <div className="mt-5 border border-gray-200 rounded-2xl p-3 sm:p-3.5 flex items-center justify-between hover:bg-gray-50/70 transition-colors">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 flex-shrink-0">
-                  <UserCheck className="w-4 h-4" />
-                </div>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-gray-900">
-                    New here?
-                  </p>
-                  <p className="text-[11px] text-gray-500">
-                    Create an account to get started!
-                  </p>
-                </div>
-              </div>
-              <Link
-                to="/signup"
-                className="text-[11px] font-bold text-gray-900 hover:text-blue-600 uppercase tracking-tight flex items-center gap-1 pl-2 whitespace-nowrap"
-              >
-                SIGN UP NOW <span className="text-xs">&gt;</span>
-              </Link>
-            </div>
 
             <div className="pt-3 flex items-center justify-center gap-1.5 text-[11px] text-gray-500">
               <Lock className="w-3.5 h-3.5 text-gray-400" />
-              <span>Your privacy is our priority</span>
+              <span>Secure Administrator Access</span>
             </div>
           </form>
         </div>
