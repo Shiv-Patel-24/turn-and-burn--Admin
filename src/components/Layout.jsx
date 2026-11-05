@@ -1,5 +1,5 @@
 import React from "react";
-import { Outlet, Link, useLocation } from "react-router-dom";
+import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   Car,
@@ -19,7 +19,10 @@ import {
   Search,
   Bell,
   Plus,
+  LogOut,
 } from "lucide-react";
+import { adminService } from "../api/admin";
+import { getAuthUser } from "../api/client";
 
 const navItems = [
   { path: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -41,6 +44,15 @@ const navItems = [
 
 export default function Layout() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const authUser = getAuthUser();
+
+  const handleLogout = () => {
+    if (window.confirm("Are you sure you want to log out?")) {
+      adminService.logout();
+      navigate("/signin");
+    }
+  };
 
   const getPageTitle = () => {
     if (location.pathname === "/" || location.pathname === "")
@@ -119,16 +131,31 @@ export default function Layout() {
         </nav>
 
         <div className="p-3 border-t border-[#1C1F26]">
-          <div className="flex items-center gap-3 px-2 py-1.5 rounded-lg hover:bg-white/5 cursor-pointer transition-colors">
-            <div className="w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
-              AD
+          <div className="flex items-center justify-between px-2 py-1.5 rounded-lg hover:bg-white/5 transition-colors group">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-[#0066FF] text-white flex items-center justify-center text-xs font-bold flex-shrink-0">
+                {authUser?.name
+                  ? authUser.name.charAt(0).toUpperCase()
+                  : authUser?.email
+                  ? authUser.email.charAt(0).toUpperCase()
+                  : "AD"}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-medium text-white truncate">
+                  {authUser?.name || authUser?.fullName || "Admin User"}
+                </p>
+                <p className="text-[10px] text-gray-400 truncate">
+                  {authUser?.role || "Super Admin"}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-white truncate">
-                Admin User
-              </p>
-              <p className="text-[10px] text-gray-400 truncate">Super Admin</p>
-            </div>
+            <button
+              onClick={handleLogout}
+              title="Log out"
+              className="text-gray-400 hover:text-rose-400 p-1.5 rounded-md hover:bg-white/10 transition-colors"
+            >
+              <LogOut size={16} />
+            </button>
           </div>
         </div>
       </aside>
