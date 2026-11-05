@@ -415,4 +415,51 @@ export const adminService = {
   async getAnalyticsOverview() {
     return apiRequest("/admin/analytics");
   },
+
+  // Support Tickets Endpoints
+  async getSupportTickets(params = {}) {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== "all" && params.status !== "All") {
+      query.set("status", params.status.toLowerCase());
+    }
+    if (params.search) {
+      query.set("search", params.search.trim());
+    }
+    if (params.page) {
+      query.set("page", params.page);
+    }
+    if (params.limit) {
+      query.set("limit", params.limit);
+    }
+    const qs = query.toString();
+    return apiRequest(`/admin/support-tickets${qs ? `?${qs}` : ""}`);
+  },
+
+  async getSupportTicketCounts() {
+    return apiRequest("/admin/support-tickets/counts");
+  },
+
+  async getSupportTicket(id) {
+    return apiRequest(`/admin/support-tickets/${id}`);
+  },
+
+  async replySupportTicket(id, message) {
+    return apiRequest(`/admin/support-tickets/${id}/reply`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    });
+  },
+
+  async closeSupportTicket(id) {
+    return apiRequest(`/admin/support-tickets/${id}/close`, {
+      method: "PATCH",
+    });
+  },
+
+  async updateSupportTicketStatus(id, status) {
+    return apiRequest(`/admin/support-tickets/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    });
+  },
 };
