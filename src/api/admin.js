@@ -343,6 +343,75 @@ export const adminService = {
     });
   },
 
+  // CMS Endpoints: Terms & Conditions, About Us, FAQs, Privacy
+  async getCmsSections(page = "terms") {
+    return apiRequest(`/admin/cms/${page}`);
+  },
+
+  async createCmsSection(page = "terms", data) {
+    return apiRequest(`/admin/cms/${page}`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCmsSection(page = "terms", id, data) {
+    return apiRequest(`/admin/cms/${page}/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCmsSection(page = "terms", id) {
+    return apiRequest(`/admin/cms/${page}/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  async reorderCmsSections(page = "terms", orderedIds) {
+    return apiRequest(`/admin/cms/${page}/reorder`, {
+      method: "POST",
+      body: JSON.stringify({ orderedIds }),
+    });
+  },
+
+  // Blog Management Endpoints
+  async getBlogPosts(params = {}) {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== "all" && params.status !== "All") {
+      query.set("status", params.status.toLowerCase());
+    }
+    if (params.search) {
+      query.set("search", params.search.trim());
+    }
+    const qs = query.toString();
+    return apiRequest(`/admin/blog${qs ? `?${qs}` : ""}`);
+  },
+
+  async getBlogPost(id) {
+    return apiRequest(`/admin/blog/${id}`);
+  },
+
+  async createBlogPost(data) {
+    return apiRequest("/admin/blog", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateBlogPost(id, data) {
+    return apiRequest(`/admin/blog/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteBlogPost(id) {
+    return apiRequest(`/admin/blog/${id}`, {
+      method: "DELETE",
+    });
+  },
+
   async getAnalyticsOverview() {
     return apiRequest("/admin/analytics");
   },
