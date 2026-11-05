@@ -85,7 +85,7 @@ export default function Layout() {
           </div>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 scrollbar-thin scrollbar-thumb-gray-800">
+        <nav className="flex-1 overflow-y-auto px-3 py-2 space-y-1 no-scrollbar">
           {navItems.map((item, idx) => {
             if (item.divider) {
               return (
