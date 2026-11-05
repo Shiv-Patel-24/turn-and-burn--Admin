@@ -46,6 +46,7 @@ export default function Layout() {
   const location = useLocation();
   const navigate = useNavigate();
   const authUser = getAuthUser();
+  const [sidebarOpen, setSidebarOpen] = React.useState(true);
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to log out?")) {
@@ -77,7 +78,11 @@ export default function Layout() {
   return (
     <div className="flex h-screen bg-[#F8F9FA] overflow-hidden font-sans">
       {/* Sidebar */}
-      <aside className="w-60 bg-[#0E1015] text-gray-300 flex flex-col flex-shrink-0 select-none border-r border-[#1B1E28]">
+      <aside
+        className={`${
+          sidebarOpen ? "w-64" : "w-0 -translate-x-full lg:w-0"
+        } bg-[#0E1015] text-gray-300 flex flex-col flex-shrink-0 select-none border-r border-[#1B1E28] transition-all duration-300 ease-in-out overflow-hidden z-20`}
+      >
         {/* Brand Header */}
         <div className="px-5 py-4 flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center p-0.5 shadow-sm overflow-hidden flex-shrink-0">
@@ -114,17 +119,17 @@ export default function Layout() {
               <Link
                 key={item.path}
                 to={item.path}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-medium transition-colors ${
+                className={`flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl text-[13px] font-medium transition-colors ${
                   isActive
-                    ? "bg-[#122B55] text-[#3B82F6]"
+                    ? "bg-[#122B55] text-[#3B82F6] font-semibold"
                     : "text-gray-400 hover:text-white hover:bg-white/5"
                 }`}
               >
                 <Icon
-                  size={17}
-                  className={isActive ? "text-[#3B82F6]" : "text-gray-400"}
+                  size={20}
+                  className={`${isActive ? "text-[#3B82F6]" : "text-gray-400"} shrink-0`}
                 />
-                <span>{item.label}</span>
+                <span className="truncate">{item.label}</span>
               </Link>
             );
           })}
@@ -154,7 +159,7 @@ export default function Layout() {
               title="Log out"
               className="text-gray-400 hover:text-rose-400 p-1.5 rounded-md hover:bg-white/10 transition-colors"
             >
-              <LogOut size={16} />
+              <LogOut size={18} />
             </button>
           </div>
         </div>
@@ -163,8 +168,12 @@ export default function Layout() {
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden bg-[#F8F9FA]">
         <header className="bg-white border-b border-gray-100 h-16 flex items-center justify-between px-6 flex-shrink-0 z-10">
           <div className="flex items-center gap-4">
-            <button className="text-gray-500 hover:text-gray-700 p-1 -ml-1">
-              <Menu size={20} />
+            <button
+              onClick={() => setSidebarOpen((prev) => !prev)}
+              className="text-gray-600 hover:text-gray-900 p-2 -ml-2 rounded-lg hover:bg-gray-100 transition-colors"
+              title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            >
+              <Menu size={22} />
             </button>
             <h2 className="text-base font-semibold text-gray-900">
               {getPageTitle()}
