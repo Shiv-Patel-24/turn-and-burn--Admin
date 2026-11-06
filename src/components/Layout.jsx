@@ -1,45 +1,41 @@
 import React from "react";
 import { Outlet, Link, useLocation, useNavigate } from "react-router-dom";
+import { Menu, Search, Bell, Plus, LogOut } from "lucide-react";
 import {
-  LayoutDashboard,
-  Car,
-  Calendar,
-  Users,
-  Network,
-  MapPin,
-  CreditCard,
-  BarChart2,
-  AlertTriangle,
-  MessageSquare,
-  HelpCircle,
-  Edit3,
-  Info,
-  FileText,
-  Menu,
-  Search,
-  Bell,
-  Plus,
-  LogOut,
-} from "lucide-react";
+  DashboardIcon,
+  FleetIcon,
+  CalendarIcon,
+  UserIcon,
+  HostsIcon,
+  LocationIcon,
+  PaymentIcon,
+  ReportIcon,
+  DangerIcon,
+  ContactUsIcon,
+  FAqIcon,
+  BlogsIcon,
+  AboutUsIcon,
+  TermsIcon,
+} from "./icons";
 import { adminService } from "../api/admin";
 import { getAuthUser } from "../api/client";
 
 const navItems = [
-  { path: "/", label: "Dashboard", icon: LayoutDashboard },
-  { path: "/fleet", label: "Fleet", icon: Car },
-  { path: "/bookings", label: "Bookings", icon: Calendar },
-  { path: "/users", label: "Users", icon: Users },
-  { path: "/hosts", label: "Hosts", icon: Network },
-  { path: "/tracking", label: "Tracking", icon: MapPin },
-  { path: "/payments", label: "Payments", icon: CreditCard },
-  { path: "/reports", label: "Reports", icon: BarChart2 },
-  { path: "/damage", label: "Damage", icon: AlertTriangle },
+  { path: "/", label: "Dashboard", icon: DashboardIcon },
+  { path: "/fleet", label: "Fleet", icon: FleetIcon },
+  { path: "/bookings", label: "Bookings", icon: CalendarIcon },
+  { path: "/users", label: "Users", icon: UserIcon },
+  { path: "/hosts", label: "Hosts", icon: HostsIcon },
+  { path: "/tracking", label: "Tracking", icon: LocationIcon },
+  { path: "/payments", label: "Payments", icon: PaymentIcon },
+  { path: "/reports", label: "Reports", icon: ReportIcon },
+  { path: "/damage", label: "Damage", icon: DangerIcon },
   { divider: true },
-  { path: "/contact", label: "Contact Us", icon: MessageSquare },
-  { path: "/faqs", label: "FAQs", icon: HelpCircle },
-  { path: "/blogs", label: "Blogs", icon: Edit3 },
-  { path: "/about", label: "About Us", icon: Info },
-  { path: "/terms", label: "Terms & Conditions", icon: FileText },
+  { path: "/contact", label: "Contact Us", icon: ContactUsIcon },
+  { path: "/faqs", label: "FAQs", icon: FAqIcon },
+  { path: "/blogs", label: "Blogs", icon: BlogsIcon },
+  { path: "/about", label: "About Us", icon: AboutUsIcon },
+  { path: "/terms", label: "Terms & Conditions", icon: TermsIcon },
 ];
 
 export default function Layout() {
@@ -142,8 +138,8 @@ export default function Layout() {
                 {authUser?.name
                   ? authUser.name.charAt(0).toUpperCase()
                   : authUser?.email
-                  ? authUser.email.charAt(0).toUpperCase()
-                  : "AD"}
+                    ? authUser.email.charAt(0).toUpperCase()
+                    : "AD"}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-medium text-white truncate">
