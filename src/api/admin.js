@@ -463,6 +463,44 @@ export const adminService = {
     });
   },
 
+  // Host Payouts Endpoints
+  async getPayouts(params = {}) {
+    const query = new URLSearchParams();
+    if (params.status && params.status !== "all" && params.status !== "All") {
+      query.set("status", params.status.toLowerCase());
+    }
+    if (params.hostId) {
+      query.set("hostId", params.hostId);
+    }
+    const qs = query.toString();
+    return apiRequest(`/admin/payouts${qs ? `?${qs}` : ""}`);
+  },
+
+  async createPayout(data) {
+    return apiRequest("/admin/payouts", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async markPayoutPaid(id) {
+    return apiRequest(`/admin/payouts/${id}/paid`, {
+      method: "PATCH",
+    });
+  },
+
+  // Host Vehicle Approvals Endpoints
+  async getPendingVehicles() {
+    return apiRequest("/admin/vehicles/pending");
+  },
+
+  async reviewVehicle(id, approvalStatus, reason = "") {
+    return apiRequest(`/admin/vehicles/${id}/review`, {
+      method: "PATCH",
+      body: JSON.stringify({ approvalStatus, reason }),
+    });
+  },
+
   // Company Settings Endpoints
   async getCompanySettings() {
     return apiRequest("/admin/settings");
