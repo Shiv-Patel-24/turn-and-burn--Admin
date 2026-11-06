@@ -462,4 +462,16 @@ export const adminService = {
       body: JSON.stringify({ status }),
     });
   },
+
+  // Company Settings Endpoints
+  async getCompanySettings() {
+    return apiRequest("/admin/settings");
+  },
+
+  async updateCompanySettings(data) {
+    return apiRequest("/admin/settings", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    });
+  },
 };

@@ -16,6 +16,7 @@ import {
   BlogsIcon,
   AboutUsIcon,
   TermsIcon,
+  SettingIcon,
 } from "./icons";
 import { adminService } from "../api/admin";
 import { getAuthUser } from "../api/client";
@@ -36,6 +37,7 @@ const navItems = [
   { path: "/blogs", label: "Blogs", icon: BlogsIcon },
   { path: "/about", label: "About Us", icon: AboutUsIcon },
   { path: "/terms", label: "Terms & Conditions", icon: TermsIcon },
+  { path: "/settings", label: "Settings", icon: SettingIcon },
 ];
 
 export default function Layout() {
@@ -68,6 +70,7 @@ export default function Layout() {
     if (location.pathname.startsWith("/blogs")) return "Blogs";
     if (location.pathname.startsWith("/about")) return "About Us";
     if (location.pathname.startsWith("/terms")) return "Terms & Conditions";
+    if (location.pathname.startsWith("/settings")) return "Company Settings";
     return "Turn & Burn Admin";
   };
 

@@ -17,6 +17,7 @@ import Blogs from "./pages/Blogs";
 import FAQs from "./pages/FAQs";
 import AboutUs from "./pages/AboutUs";
 import Terms from "./pages/Terms";
+import Settings from "./pages/Settings";
 import SignIn from "./pages/SignIn";
 import SignUp from "./pages/SignUp";
 
@@ -44,6 +45,7 @@ function App() {
         <Route path="blogs" element={<Blogs />} />
         <Route path="about" element={<AboutUs />} />
         <Route path="terms" element={<Terms />} />
+        <Route path="settings" element={<Settings />} />
         <Route
           path="*"
           element={
