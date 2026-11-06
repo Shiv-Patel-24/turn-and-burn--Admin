@@ -1,0 +1,17 @@
+export { default as AboutUsIcon } from "./AboutUsIcons";
+export { default as BellIcon } from "./BellIcons";
+export { default as BlogsIcon } from "./BlogsIcon";
+export { default as CalendarIcon } from "./CalendarIcon";
+export { default as ContactUsIcon } from "./ContactUs";
+export { default as DangerIcon } from "./DangerIcon";
+export { default as DashboardIcon } from "./DashboardIcon";
+export { default as FAqIcon } from "./FAqIcon";
+export { default as FleetIcon } from "./FleetIcon";
+export { default as HostsIcon } from "./HostsIcon";
+export { default as LocationIcon } from "./LocationIcon";
+export { default as MenuIcon } from "./MenuIcon";
+export { default as PaymentIcon } from "./PaymentIcon";
+export { default as ReportIcon } from "./ReportIcon";
+export { default as SettingIcon } from "./SettingIcon";
+export { default as TermsIcon } from "./T&CIcon";
+export { default as UserIcon } from "./UserIcon";
